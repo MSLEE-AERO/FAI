@@ -25,13 +25,13 @@ class student(human):
         self.major = major
 
 
-minsul = human("minsul",27)
+minsul = human("minsul", 27)
 
 print(minsul.name)
 print(minsul.age)
 print(minsul.planet)
 
-minsul_student = student('Kyunghee university','Mechanical engineering','Minsul Lee',27)
+minsul_student = student('Kyunghee university', 'Mechanical engineering', 'Minsul Lee', 27)
 
 print(minsul_student.name)
 print(minsul_student.major)
@@ -39,10 +39,6 @@ print(minsul_student.planet)
 print(minsul_student.university)
 print(minsul_student.age)
 
-
 print(callable(human))
 
-minsul(1,2,3,hahaha="hahaha~!")
-
-
-
+minsul(1, 2, 3, hahaha="hahaha~!")
