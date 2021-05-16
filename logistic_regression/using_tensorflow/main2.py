@@ -40,7 +40,7 @@ b = tf.Variable(tf.random.normal(shape=(num_of_data, 1)))
 #
 Y_hat = tf.zeros(shape=(num_of_data, 1))
 p_hat = tf.zeros(shape=(num_of_data, 1))
-grad_L = {"dw": 0.0, "db": 0.0}
+grad_L = []
 #
 # initialize hyper parameter
 alpha = 0.001
@@ -56,8 +56,8 @@ def forward_propagation(xx):
 
 def update_params():
     global w, b
-    w = w - alpha * (grad_L["dw"] + lamb * w)
-    b = b - alpha * grad_L["db"]
+    w = w - alpha * (grad_L[0] + lamb * w)
+    b = b - alpha * grad_L[1]
     return None
 
 
@@ -81,7 +81,7 @@ def shuffle_data():
     return None
 
 
-@tf.function
+#@tf.function
 def calc_gradient():
     global grad_L
     with tf.GradientTape() as tape:
