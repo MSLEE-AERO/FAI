@@ -6,4 +6,4 @@ Each contents is just material of future project.
 
 1. Supervised learning
 2. Unsupervised learning
-3. Reinforeced learning
+3. Reinforcement learning
