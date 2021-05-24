@@ -52,3 +52,33 @@ def kronecker_delta(i, j):
         return 1
     else:
         return 0
+
+
+def activation_function(z, name):
+    if name == 'sigmoid':
+        return sigmoid(z)
+    elif name == 'softmax':
+        return softmax(z)
+    elif name == 'relu':
+        return relu(z)
+    elif name == 'leaky_relu':
+        return leaky_relu(z)
+    else:
+        print('invalid activation function name')
+        quit()
+        return 404
+
+
+def grad_actiavtion_function(z, name):
+    if name == 'sigmoid':
+        return grad_sigmoid(z)
+    elif name == 'softmax':
+        return grad_softmax(z)
+    elif name == 'relu':
+        return grad_relu(z)
+    elif name == 'leaky_relu':
+        return grad_leaky_relu(z)
+    else:
+        print('invalid activation function name')
+        quit()
+        return 404
