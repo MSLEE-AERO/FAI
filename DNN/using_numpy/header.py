@@ -6,7 +6,8 @@ def sigmoid(z):
 
 
 def softmax(z):
-    return np.exp(z) / np.sum(np.exp(z))
+    z = z - np.max(z, keepdims=True, axis=1)
+    return np.exp(z) / np.sum(np.exp(z), axis=1, keepdims=True)
 
 
 def relu(z):
@@ -14,10 +15,7 @@ def relu(z):
 
 
 def leaky_relu(z):
-    if z > 0:
-        return z
-    else:
-        return 0.01 * z
+    return np.maximum(0.01*z, z)
 
 
 def grad_sigmoid(z):
@@ -25,11 +23,11 @@ def grad_sigmoid(z):
 
 
 def grad_softmax(z):
-    m = len(z)
-    grad = np.zeros(shape=[m, m])
-    for i in range(m):
+    n = len(z)
+    grad = np.zeros(shape=(n, n))
+    for i in range(n):
         sigma_i = softmax(z)[i]
-        for j in range(m):
+        for j in range(n):
             sigma_j = softmax(z)[j]
             grad[i, j] = sigma_i * (kronecker_delta(i, j) - sigma_j)
     return grad

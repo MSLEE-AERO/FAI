@@ -9,7 +9,7 @@ import random
 
 
 def sigmoid(x):
-    return 1.0/(1+np.exp(-x))
+    return 1.0 / (1 + np.exp(-x))
 
 
 number_of_data1 = 1000
@@ -48,17 +48,17 @@ Y_test = np.vstack((y1_test, y2_test))
 plt.scatter(X[:, 0], X[:, 1], c=Y[:, 0])
 plt.scatter(X_test[:, 0], X_test[:, 1], c=Y_test[:, 0])
 plt.show()
-dim = np.size(X,1)
+dim = np.size(X, 1)
 
 # initializing parameters
 w = np.random.rand(dim, 1) * 0.001
 b = np.zeros(shape=(number_of_data, 1))
 
-Y_hat = np.zeros(shape=[number_of_data,1])
-p_hat = np.zeros(shape=[number_of_data,1])
+Y_hat = np.zeros(shape=[number_of_data, 1])
+p_hat = np.zeros(shape=[number_of_data, 1])
 grad_L = {"dw": 0.0, "db": 0.0}
 alpha = 0.001
-lamb = 0.001
+lamb = 0.05
 
 
 def forward_propagation(xx):
@@ -71,31 +71,32 @@ def forward_propagation(xx):
 def back_propagation():
     global grad_L
     m = number_of_data
-    round_L_round_p_hat = -(p/p_hat - (1. - p)/(1. - p_hat))/m
+    round_L_round_p_hat = -(p / p_hat - (1. - p) / (1. - p_hat)) / m
     round_p_hat_round_Y_hat = sigmoid(Y) * (1. - sigmoid(Y))
-    temp = round_L_round_p_hat*round_p_hat_round_Y_hat
+    temp = round_L_round_p_hat * round_p_hat_round_Y_hat
 
-    grad_L = {"dw": np.matmul(X.transpose(),temp),
+    grad_L = {"dw": np.matmul(X.transpose(), temp),
               "db": np.mean(temp)}
     return None
 
 
 def update_params():
     global w, b, lamb
-    w = w - alpha * (grad_L["dw"] + lamb * w)
+    # w = w - alpha * (grad_L["dw"] + lamb * w)
+    w = w * (1 - alpha * lamb) - alpha * grad_L["dw"]
     b = b - alpha * grad_L["db"]
     return None
 
 
 def calc_loss():
-    return np.sum(-(p*np.log(p_hat)+(1-p)*np.log(1-p_hat)))/number_of_data
+    return np.sum(-(p * np.log(p_hat) + (1 - p) * np.log(1 - p_hat))) / number_of_data
 
 
-def calc_accuracy(xx,yy):
+def calc_accuracy(xx, yy):
     forward_propagation(xx)
     prediction = np.zeros(p_hat.shape)
     prediction[p_hat >= 0.9] = 1
-    accuracy1 = (1.0 - np.mean(np.abs(prediction-yy))) * 100
+    accuracy1 = (1.0 - np.mean(np.abs(prediction - yy))) * 100
     return accuracy1
 
 
@@ -106,8 +107,8 @@ def shuffle_data():
 
 
 # main calculation
-number_of_epochs = 50
-number_of_iterations = 1000
+number_of_epochs = 10
+number_of_iterations = 3000
 total_loss = []
 for epoch in range(number_of_epochs):
     shuffle_data()  # this effect is so dramatic???
@@ -118,9 +119,8 @@ for epoch in range(number_of_epochs):
         if i % 100 == 0:
             total_loss.append(calc_loss())
             print(f'loss after iteration {i}: {calc_loss()}')
-            print(f'train accuracy: {calc_accuracy(X,Y)}')
-            print(f'test accuracy: {calc_accuracy(X_test,Y_test)}')
-
+            print(f'train accuracy: {calc_accuracy(X, Y)}')
+            print(f'test accuracy: {calc_accuracy(X_test, Y_test)}')
 
 plt.figure()
 plt.yscale('log')
