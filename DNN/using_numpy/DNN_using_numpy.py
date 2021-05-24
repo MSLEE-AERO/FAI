@@ -35,7 +35,7 @@ lamb = 0.001
 params = {}
 for i in range(1, num_of_layers):
     params["w" + str(i)] = np.random.rand(layers[i - 1], layers[i]) * 0.001
-    params["b" + str(i)] = np.zeros((num_of_data_train, layers[i]))
+    params["b" + str(i)] = np.zeros((1, layers[i]))
 
 
 def grad_loss(a, y, m, loss_function):
@@ -78,24 +78,22 @@ if __name__ == "__main__":
                 if ilayer == num_of_layers - 1:
                     dLda = grad_loss(a[ilayer], y_train, num_of_data_train, loss_func)
                     dadz = grad_actiavtion_function(z[ilayer], 'sigmoid')
-                    #temp = linear_grad(dLda, dadz)
-                    #
-                    temp = dLda * dadz # element by element operation
-                    dzdw = a[ilayer-1]
-                    grads["dw" + str(ilayer)] = linear_grad(temp, dzdw)
+                    # temp = linear_grad(dLda, dadz)
+                    temp = np.matmul(dadz.transpose(), dLda)  # element by element operation
+                    dzdw = a[ilayer - 1]
+                    grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), temp)
                     grads["db" + str(ilayer)] = np.mean(temp)
                 else:
-                    dzda = params["w"+str(ilayer)]
+                    dzda = params["w" + str(ilayer)]
                     dadz = grad_actiavtion_function(z[ilayer], activation_func)
-                    #
                     temp = temp * dzda
-                    temp = linear_grad(temp, dadz)
+                    temp = temp * dadz
                     if ilayer == 1:
                         dzdw = x_train
                     else:
                         dzdw = a[ilayer]
-                    grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), temp)
-                    grads["db" + str(ilayer)] = np.mean(temp)
+                grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), temp)
+                grads["db" + str(ilayer)] = np.mean(temp)
             for ilayer in range(1, num_of_layers):
                 params["w" + str(ilayer)] = params["w" + str(ilayer)] - alpha * grads["dw" + str(ilayer)]
                 params["b" + str(ilayer)] = params["b" + str(ilayer)] - alpha * grads["db" + str(ilayer)]
