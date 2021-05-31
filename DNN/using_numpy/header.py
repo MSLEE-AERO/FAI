@@ -19,10 +19,12 @@ def leaky_relu(z):
 
 
 def grad_sigmoid(z):
-    return z * (1 - z)
+    sigma = sigmoid(z)
+    return sigma * (1 - sigma)
 
 
 def grad_softmax(z):
+    m, n = z.shape
     n = len(z)
     grad = np.zeros(shape=(n, n))
     for i in range(n):
@@ -49,9 +51,9 @@ def grad_leaky_relu(z):
 
 def kronecker_delta(i, j):
     if i == j:
-        return 1
+        return 1.0
     else:
-        return 0
+        return 0.0
 
 
 def activation_function(z, name):
@@ -82,3 +84,11 @@ def grad_actiavtion_function(z, name):
         print('invalid activation function name')
         quit()
         return 404
+
+
+#def split_train_test(data,test_ratio):
+#    shuffled_indices = np.random.permutation(len(data))
+#    test_set_size = int((len(data)*test_ratio))
+#    test_indices = shuffled_indices[:test_set_size]
+#    train_indices = shuffled_indices[test_set_size:]
+#    return data.iloc[train_indices], data.iloc[test_indices]

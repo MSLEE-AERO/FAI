@@ -141,7 +141,7 @@ def single_backward(da, cache, activation):
     elif activation == "softmax":
         dz = softmax_gradient(da, activation_cache)
     grads = linear_grad(dz, linear_cache)
-    return grads['dw'], grads['db'], grads['da']
+    return grads['w'], grads['db'], grads['da']
 
 
 def backward(y, a, m, caches, loss_function, activation, last_activation, num_of_layers):

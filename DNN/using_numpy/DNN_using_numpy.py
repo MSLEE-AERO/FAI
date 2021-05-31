@@ -23,6 +23,7 @@ np.random.shuffle(y_train)
 for m in range(num_of_data_test):
     if m > 0.5 * num_of_data_test:
         y_test[m] = 1
+#
 np.random.shuffle(x_test)
 np.random.shuffle(y_test)
 #
@@ -73,35 +74,45 @@ if __name__ == "__main__":
                 else:
                     a[ilayer] = activation_function(z[ilayer], activation_func)
                 x = a[ilayer]
+                print('forward',i,j,ilayer)
 
             for ilayer in range(num_of_layers - 1, 0, -1):
+                print('backward',i,j,ilayer)
                 if ilayer == num_of_layers - 1:
                     dLda = grad_loss(a[ilayer], y_train, num_of_data_train, loss_func)
-                    dadz = grad_actiavtion_function(z[ilayer], 'sigmoid')
-                    # temp = linear_grad(dLda, dadz)
-                    temp = np.matmul(dadz.transpose(), dLda)  # element by element operation
+                    print('dLda is', dLda)
+
+                    dadz = grad_actiavtion_function(z[ilayer], 'softmax')
+                    print('dadz is', dadz)
+
+                    #temp = linear_grad(dLda, dadz)
+                    temp = np.matmul(dadz.transpose(),dLda)
+                    print('temp is', temp)
+                    #temp = dLda * dadz  # element by element operation
                     dzdw = a[ilayer - 1]
                     grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), temp)
+                    print(grads["dw" + str(ilayer)])
                     grads["db" + str(ilayer)] = np.mean(temp)
+                    print(grads["db" + str(ilayer)])
                 else:
-                    dzda = params["w" + str(ilayer)]
+                    dzda = params["w" + str(ilayer+1)]
                     dadz = grad_actiavtion_function(z[ilayer], activation_func)
-                    temp = temp * dzda
+                    temp = np.matmul(temp, dzda.transpose())
                     temp = temp * dadz
                     if ilayer == 1:
                         dzdw = x_train
                     else:
-                        dzdw = a[ilayer]
-                grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), temp)
-                grads["db" + str(ilayer)] = np.mean(temp)
+                        dzdw = a[ilayer-1]
+                    grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), temp)
+                    grads["db" + str(ilayer)] = np.mean(temp)
             for ilayer in range(1, num_of_layers):
                 params["w" + str(ilayer)] = params["w" + str(ilayer)] - alpha * grads["dw" + str(ilayer)]
                 params["b" + str(ilayer)] = params["b" + str(ilayer)] - alpha * grads["db" + str(ilayer)]
 
             if j % 100 == 0:
-                loss = calc_loss(y_train, a, num_of_data_train, loss_func)
-            total_loss = total_loss.append(loss)
-            print(f"epoch: {i}, iteration: {j} loss: {loss}")
+                loss = calc_loss(y_train, a[num_of_layers-1], num_of_data_train, loss_func)
+                total_loss.append(loss)
+                print(f"epoch: {i}, iteration: {j} loss: {loss}")
 
     plt.figure()
     plt.plot(total_loss)
