@@ -3,29 +3,43 @@ import numpy as np
 from header import *
 import matplotlib.pyplot as plt
 
-num_of_data_train = 1000
-num_of_data_test = int(num_of_data_train * 0.2)
-#
-num_of_features = 30
-#
-x_train = np.random.randn(num_of_data_train, num_of_features)
-x_test = np.random.randn(num_of_data_test, num_of_features)
-y_train = np.zeros(shape=(num_of_data_train, 1))
-y_test = np.zeros(shape=(num_of_data_test, 1))
-#
-for m in range(num_of_data_train):
-    if m > 0.5 * num_of_data_train:
-        y_train[m] = 1
+number_of_data1 = 1000
+number_of_data2 = 1000
+number_of_data = number_of_data1 + number_of_data2
+num_of_data_train = number_of_data
 
-np.random.shuffle(x_train)
-np.random.shuffle(y_train)
-#
-for m in range(num_of_data_test):
-    if m > 0.5 * num_of_data_test:
-        y_test[m] = 1
-#
-np.random.shuffle(x_test)
-np.random.shuffle(y_test)
+# dataset generation
+mean1 = [3., 1.]
+mean2 = [1., 3.]
+cov1 = [[3.0, 1.0], [1.0, 3.0]]
+cov2 = cov1
+
+mean1_test = [4., 2.]
+mean2_test = [0., 2.]
+cov1_test = [[3.0, 1.0], [1.0, 3.0]]
+cov2_test = cov1_test
+
+num_of_features = 2
+# train dataset
+x1 = np.random.multivariate_normal(mean=mean1, cov=cov1, size=number_of_data1)
+x2 = np.random.multivariate_normal(mean=mean2, cov=cov2, size=number_of_data2)
+x_train = np.vstack((x1, x2))
+
+x1_test = np.random.multivariate_normal(mean=mean1_test, cov=cov1_test, size=number_of_data1)
+x2_test = np.random.multivariate_normal(mean=mean2_test, cov=cov2_test, size=number_of_data2)
+x_test = np.vstack((x1_test, x2_test))
+
+y1 = np.zeros((number_of_data1, 1), dtype='float32')
+y2 = np.ones((number_of_data2, 1), dtype='float32')
+y_train = np.vstack((y1, y2))
+
+y1_test = np.zeros((number_of_data1, 1), dtype='float32')
+y2_test = np.ones((number_of_data2, 1), dtype='float32')
+y_test = np.vstack((y1_test, y2_test))
+
+plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train[:, 0])
+plt.scatter(x_test[:, 0], x_test[:, 1], c=y_test[:, 0])
+plt.show()
 #
 layers = [num_of_features, 20, 16, 1]
 num_of_layers = len(layers)
@@ -82,7 +96,7 @@ if __name__ == "__main__":
                     dLda = grad_loss(a[ilayer], y_train, num_of_data_train, loss_func)
                     print('dLda is', dLda)
 
-                    dadz = grad_actiavtion_function(z[ilayer], 'softmax')
+                    dadz = grad_activation_function(z[ilayer], 'softmax')
                     print('dadz is', dadz)
 
                     #temp = linear_grad(dLda, dadz)
@@ -96,7 +110,7 @@ if __name__ == "__main__":
                     print(grads["db" + str(ilayer)])
                 else:
                     dzda = params["w" + str(ilayer+1)]
-                    dadz = grad_actiavtion_function(z[ilayer], activation_func)
+                    dadz = grad_activation_function(z[ilayer], activation_func)
                     temp = np.matmul(temp, dzda.transpose())
                     temp = temp * dadz
                     if ilayer == 1:
