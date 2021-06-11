@@ -102,6 +102,12 @@ def grad_relu(dLda, z):
     return dLda * dz
 
 
+def gradient_clip(grad, limit):
+    if np.linalg.norm(grad) >= limit:
+        grad = limit * (grad / np.linalg.norm(grad))
+    return grad
+
+
 def grad_leaky_relu(dLda, z):
     dz = np.ones(z.shape)
     dz[z < 0] = 0.01
@@ -171,7 +177,7 @@ if __name__ == "__main__":
                 if ilayer == num_of_layers - 1:
                     dLda = grad_loss(h.a[ilayer], y_train, num_of_data_train, loss_func)
 
-                    dLdz = grad_activation_function(dLda, h.z[ilayer], 'softmax')
+                    dLdz = grad_activation_function(dLda, h.z[ilayer], 'sigmoid')
 
                     dzdw = h.a[ilayer - 1]
                     h.grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), dLdz)
@@ -179,7 +185,7 @@ if __name__ == "__main__":
                 else:
                     dzda = params["w" + str(ilayer + 1)]
                     dLda = np.matmul(dLdz, dzda.transpose())
-                    dLdz = grad_activation_function(dLda,h.z[ilayer], activation_func)
+                    dLdz = grad_activation_function(dLda, h.z[ilayer], activation_func)
                     if ilayer == 1:
                         dzdw = x_train
                     else:
@@ -187,8 +193,10 @@ if __name__ == "__main__":
                     h.grads["dw" + str(ilayer)] = np.matmul(dzdw.transpose(), dLdz)
                     h.grads["db" + str(ilayer)] = np.mean(dLdz, axis=0, keepdims=True)
             for ilayer in range(1, num_of_layers):
-                params["w" + str(ilayer)] = params["w" + str(ilayer)] - alpha * h.grads["dw" + str(ilayer)]
-                params["b" + str(ilayer)] = params["b" + str(ilayer)] - alpha * h.grads["db" + str(ilayer)]
+                params["w" + str(ilayer)] = params["w" + str(ilayer)] * (1 - alpha * lamb) - alpha * gradient_clip(
+                    h.grads["dw" + str(ilayer)], 1)
+                params["b" + str(ilayer)] = params["b" + str(ilayer)] * (1 - alpha * lamb) - alpha * gradient_clip(
+                    h.grads["db" + str(ilayer)], 1)
 
             if j % 100 == 0:
                 loss = calc_loss(y_train, h.a[num_of_layers - 1], num_of_data_train, loss_func)

@@ -17,12 +17,22 @@ class human:
         for value in args:
             print(value)
 
+    def call(self, a, b, training=True):
+        return a + b
+
 
 class student(human):
     def __init__(self, univeresity, major, name, age):
-        super().__init__(name, age)
+        super(student, self).__init__(name, age)
         self.university = univeresity
         self.major = major
+
+    def __call__(self, name):
+        print('__call__')
+        return name
+
+    def call(self, a, b, training=False):
+        return a * b
 
 
 minsul = human("minsul", 27)
@@ -40,5 +50,9 @@ print(minsul_student.university)
 print(minsul_student.age)
 
 print(callable(human))
+a = minsul_student('minsulll')
 
-minsul(1, 2, 3, hahaha="hahaha~!")
+print(minsul_student.call(10,10,training=True))
+print(minsul.call(10,10,training=True))
+
+#minsul(1, 2, 3, hahaha="hahaha~!")

@@ -1,13 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
 
 
 def init_params(dims_of_layers):
     num_of_layers = len(dims_of_layers)
     params = {}
     for i in range(1, num_of_layers):
-        params["w" + str(i)] = np.random.randn(dims_of_layers[i - 1], dims_of_layers[i]) * 0.001
+        params["w" + str(i)] = np.random.randn(dims_of_layers[i - 1], dims_of_layers[i])
         params["b" + str(i)] = np.zeros((1, dims_of_layers[i]))
     return params
 
@@ -141,7 +140,7 @@ def single_backward(da, cache, activation):
     elif activation == "softmax":
         dz = softmax_gradient(da, activation_cache)
     grads = linear_grad(dz, linear_cache)
-    return grads['w'], grads['db'], grads['da']
+    return grads['dw'], grads['db'], grads['da']
 
 
 def backward(y, a, m, caches, loss_function, activation, last_activation, num_of_layers):
@@ -172,62 +171,65 @@ def gradient_clip(grad, limit):
     return grad
 
 
-def update_params(params, learning_rate, grads, num_of_layers):
+def update_params(params, learning_rate, grads, num_of_layers, lamb):
     for i in range(1, num_of_layers):
-        params["w" + str(i)] = params["w" + str(i)] - learning_rate * gradient_clip(grads["dw" + str(i)], 0.01)
-        params["b" + str(i)] = params["b" + str(i)] - learning_rate * gradient_clip(grads["db" + str(i)], 0.01)
+        params["w" + str(i)] = params["w" + str(i)] * (1 - lamb * learning_rate) - learning_rate * gradient_clip(
+            grads["dw" + str(i)], 1)
+        params["b" + str(i)] = params["b" + str(i)] - learning_rate * gradient_clip(grads["db" + str(i)], 1)
     return params
 
 
 def predict(params, x, y, activation, last_activation, num_of_layers):
     a, _ = forward(x, params, activation, last_activation, num_of_layers)
     prediction = np.zeros(a.shape)
-    prediction[a >= 0.9] = 1
-    accuracy = np.mean(np.all(prediction == y_test, axis=1, keepdims=True)) * 100
+    prediction[a >= 0.8] = 1
+    accuracy = np.mean(np.all(prediction == y, axis=1, keepdims=True)) * 100
     return accuracy
 
 
-def make_gaussian_data(num_of_samples, negative_mean, negative_cov, positive_mean, positive_cov):
-    negative_samples = np.random.multivariate_normal(mean=negative_mean, cov=negative_cov, size=num_of_samples)
-    positive_samples = np.random.multivariate_normal(mean=positive_mean, cov=positive_cov, size=num_of_samples)
+def make_gaussian_data(num_of_samples, negative_mean, negative_cov, positive_mean, positive_cov, negative_mean2,
+                       positive_mean2):
+    half_num_of_samples = int(num_of_samples / 2)
+    negative_samples1 = np.random.multivariate_normal(mean=negative_mean, cov=negative_cov, size=half_num_of_samples)
+    negative_samples2 = np.random.multivariate_normal(mean=positive_mean, cov=negative_cov, size=half_num_of_samples)
+    positive_samples1 = np.random.multivariate_normal(mean=negative_mean2, cov=positive_cov, size=half_num_of_samples)
+    positive_samples2 = np.random.multivariate_normal(mean=positive_mean2, cov=positive_cov, size=half_num_of_samples)
 
-    x = np.vstack((negative_samples, positive_samples)).astype('float64')
-    y = np.vstack((np.zeros((num_of_samples, np.array([1, 0]))),
-                   np.ones((num_of_samples, np.array([0, 1]))))).astype('float64')
+    x = np.vstack((negative_samples1, negative_samples2, positive_samples1, positive_samples2)).astype(np.float32)
+    y = np.vstack((np.zeros((num_of_samples, 1), dtype='float32'),
+                   np.ones((num_of_samples, 1), dtype='float32')))
 
     plt.scatter(x[:, 0], x[:, 1], c=y[:, 0])
     plt.show()
-    return x, y
 
+    return x, y
 
 def dnn_model(x_train, y_train, x_test, y_test,
               learning_rate, num_of_iterations,
               num_of_epochs, loss_function,
-              activation, last_activation, dims_of_layers):
-    dim = x_test.shape[1]
+              activation, last_activation, dims_of_layers, lamb):
+    dim = x_train.shape[1]
     params = init_params(dims_of_layers)
     losses = []
     num_of_layers = len(dims_of_layers)
     for epoch in range(num_of_epochs):
-        for i, x in enumerate(x_train):
-            for j in range(num_of_iterations):
-                m = x.shape[0]
-                y = y_train[i]
-                grads, loss = forward_and_backward(x, y, m, params, activation, loss_function, last_activation,
-                                                   num_of_layers)
-                params = update_params(params, learning_rate, grads, num_of_layers)
-                if j % 100 == 0:
-                    losses.append(loss)
-                    print(f"epoch: {epoch}, loss after iteration {j}:  {loss}")
-                    # train_accuracy = predict(params, x, y)
-                    # test_accuracy = predict(params, x_test, y_test)
-                    # print(f"train accuracy: {train_accuracy}%")
-                    # print(f"test accuracy: {test_accuracy}%")
+        for j in range(num_of_iterations):
+            m = x_train.shape[0]
+            grads, loss = forward_and_backward(x_train, y_train, m, params, activation, loss_function, last_activation,
+                                               num_of_layers)
+            params = update_params(params, learning_rate, grads, num_of_layers, lamb)
+            if j % 1000 == 0:
+                losses.append(loss)
+                print(f"epoch: {epoch + 1}, loss after iteration {j}:  {loss}")
+                train_accuracy = predict(params, x_train, y_train, activation, last_activation, num_of_layers)
+                test_accuracy = predict(params, x_test, y_test, activation, last_activation, num_of_layers)
+                print(f"train accuracy: {train_accuracy}%")
+                print(f"test accuracy: {test_accuracy}%")
 
-    # train_accuracy = predict(params, x_train, y_train)
-    # test_accuracy = predict(params, x_test, y_test)
-    # print(f"final train accuracy: {train_accuracy}%")
-    # print(f"final test accuracy: {test_accuracy}%")
+    train_accuracy = predict(params, x_train, y_train, activation, last_activation, num_of_layers)
+    test_accuracy = predict(params, x_test, y_test, activation, last_activation, num_of_layers)
+    print(f"final train accuracy: {train_accuracy}%")
+    print(f"final test accuracy: {test_accuracy}%")
 
     plt.figure()
     plt.plot(losses)
@@ -239,15 +241,18 @@ def dnn_model(x_train, y_train, x_test, y_test,
     return params
 
 
-x_train, y_train = make_gaussian_data(10000, negative_mean=[3.0, 1.0], negative_cov=[[3.0, 1.0], [1.0, 3.0]],
-                                      positive_mean=[1.0, 3.0], positive_cov=[[2.0, 1.0], [1.0, 2.0]])
-x_test, y_test = make_gaussian_data(1000, negative_mean=[2.0, -1.0], negative_cov=[[3.0, 1.0], [1.0, 3.0]],
-                                    positive_mean=[-2.0, 2.0], positive_cov=[[4.0, 1.0], [1.0, 2.0]])
+x_train, y_train = make_gaussian_data(1000, negative_mean=[1.0, 1.0], negative_cov=[[3.0, 1.0], [1.0, 3.0]],
+                                      positive_mean=[20.0, 20.0], positive_cov=[[2.0, 1.0], [1.0, 2.0]],
+                                      negative_mean2=[1.0, 20.0], positive_mean2=[20.0, 1.0])
+x_test, y_test = make_gaussian_data(100, negative_mean=[1.0, 1.0], negative_cov=[[3.0, 1.0], [1.0, 3.0]],
+                                      positive_mean=[20.0, 20.0], positive_cov=[[2.0, 1.0], [1.0, 2.0]],
+                                      negative_mean2=[1.0, 20.0], positive_mean2=[20.0, 1.0])
 params = dnn_model(x_train, y_train, x_test, y_test,
                    learning_rate=0.001,
-                   num_of_iterations=1000,
-                   num_of_epochs=5,
+                   num_of_iterations=10000,
+                   num_of_epochs=10,
                    loss_function="cross_entropy",
                    activation="relu",
-                   last_activation="softmax",
-                   dims_of_layers=[2, 4, 4, 1])
+                   last_activation="sigmoid",
+                   dims_of_layers=[2, 8, 1],
+                   lamb=0.1)
