@@ -7,7 +7,7 @@ import tensorflow.python.ops.numpy_ops.np_config as np_config
 
 np_config.enable_numpy_behavior()
 # 1. Data
-dataset_url = "https:storage.googleapis.com/download.tensorflow.org/example_images/flower_photos/tgz"
+dataset_url = "https://storage.googleapis.com/download.tensorflow.org/example_images/flower_photos/tgz"
 data_dir = tf.keras.utils.get_file('flower_photos', origin=dataset_url, untar=True)
 data_dir = pathlib.Path(data_dir)
 
@@ -23,6 +23,7 @@ train_ds = tf.keras.preprocessing.image_dataset_from_directory(
     image_size=(img_height, img_width),
     batch_size=batch_size
 )
+
 val_ds = tf.keras.preprocessing.image_dataset_from_directory(
     directory=data_dir,
     validation_split=0.2,
@@ -31,7 +32,6 @@ val_ds = tf.keras.preprocessing.image_dataset_from_directory(
     image_size=(img_height, img_width),
     batch_size=batch_size
 )
-
 class_names = train_ds.class_names
 print(class_names)
 
@@ -77,7 +77,7 @@ class CustomConv(tf.keras.layers.Layer):
         super().__init__()
 
         self.filter_w = tf.Variable(
-            initial_value=tf.zeros(shape=(1, 1, 1, num_of_filters)),
+            initial_value=tf.zeros(shape=(filter_size, filter_size, prev_a_channel, num_of_filters)),
             trainable=True
         )
         self.filter_b = tf.Variable(
@@ -89,12 +89,13 @@ class CustomConv(tf.keras.layers.Layer):
         self.filter_stride = filter_stride
         self.filter_size = filter_size
         self.prev_a_channel = prev_a_channel
+        self.num_of_filters = num_of_filters
 
     def call(self, prev_a, *args, **kwargs):
         # prev_a : (m * prev_a_height * prev_a_width * prev_a_channel)
 
         (m, prev_a_height, prev_a_width, prev_a_channel) = prev_a.shape
-        (filter_size, filter_size, prev_a_channel, num_of_filters) = self.filter_w.shape
+        #(filter_size, filter_size, prev_a_channel, num_of_filters) = self.filter_w.shape
 
         # batch size, height, width, channel
 
@@ -103,31 +104,42 @@ class CustomConv(tf.keras.layers.Layer):
                                 [self.pad_size, self.pad_size],
                                 [0, 0]])
 
-        prev_a_pad = tf.pad(tensor=prev_a,
-                            paddings=paddings
-                            )
-        z_height = int((prev_a_height + 2 * self.pad_size - filter_size) / self.filter_stride) + 1
-        z_width = int((prev_a_width + 2 * self.pad_size - filter_size) / self.filter_stride) + 1
+        prev_a_pad = tf.pad(
+            tensor=prev_a,
+            paddings=paddings
+        )
 
-        z = tf.Variable(np.zeros((m, z_height, z_width, num_of_filters), dtype='float32'))
+        z_height = int((prev_a_height + 2 * self.pad_size - self.filter_size) / self.filter_stride) + 1
+        z_width = int((prev_a_width + 2 * self.pad_size - self.filter_size) / self.filter_stride) + 1
+
+        z = tf.Variable(
+            initial_value=np.zeros(
+                (m, z_height, z_width, self.num_of_filters),
+                dtype='float32'),
+            trainable=False
+        )
 
         for i in range(m):
             for h in range(z_height):
-                for w in range(num_of_filters):
-                    for c in range(num_of_filters):
-                        #height_start = h * self.filter_size
-                        #height_end = height_start + filter_size
-                        #width_start = w * self.filter_stride
-                        #width_end = width_start + filter_size
+                for w in range(self.num_of_filters):
+                    for c in range(self.num_of_filters):
+                        if i * h * w * c == 1:
+                            print(m*z_height*self.num_of_filters*self.num_of_filters)
+                        print(i, h, w, c)
+                        #print(m, z_height, num_of_filters, num_of_filters)
+                        height_start = h * self.filter_size
+                        height_end = height_start + self.filter_size
+                        width_start = w * self.filter_stride
+                        width_end = width_start + self.filter_size
 
-                        #prev_a_slice = prev_a_pad[i, height_start:height_end, width_start:width_end, :]
-                        #element = tf.math.reduce_sum(
-                        #    prev_a_slice * self.filter_w[:, :, :, c] + self.filter_b[:, :, :, c]
-                        #)
-                        #element = 0
-                        #z[i, h, w, c].assign(element)
-                        print(m,z_height,num_of_filters,num_of_filters)
-                        print(i,h,w,c)
+                        prev_a_slice = prev_a_pad[i, height_start:height_end, width_start:width_end, :]
+                        #print('before reduce sum')
+                        element = tf.math.reduce_sum(
+                            prev_a_slice * self.filter_w[:, :, :, c] + self.filter_b[:, :, :, c]
+                        )
+                        #print('after reduce sum')
+
+                        z[i, h, w, c].assign(element)
         return self.activation(z)
 
 
@@ -178,13 +190,13 @@ class CustomCnnModel(tf.keras.models.Model):
 
         self.conv1_layer = CustomConv(
             filter_size=3,
-            prev_a_channel=1,
+            prev_a_channel=3,
             num_of_filters=8,
             activation='relu',
             pad_size=1,
             filter_stride=1
         )
-
+        # 2 * 2 is usual
         self.pool1_layer = CustomPool(
             pool_size=3,
             pool_stride=1,
@@ -192,7 +204,7 @@ class CustomCnnModel(tf.keras.models.Model):
         )
         self.conv2_layer = CustomConv(
             filter_size=3,
-            prev_a_channel=1,
+            prev_a_channel=8,
             num_of_filters=16,
             activation='relu',
             pad_size=1,
@@ -206,7 +218,7 @@ class CustomCnnModel(tf.keras.models.Model):
         )
         self.conv3_layer = CustomConv(
             filter_size=3,
-            prev_a_channel=1,
+            prev_a_channel=16,
             num_of_filters=32,
             activation='relu',
             pad_size=1,
@@ -220,7 +232,7 @@ class CustomCnnModel(tf.keras.models.Model):
         )
         self.conv4_layer = CustomConv(
             filter_size=3,
-            prev_a_channel=1,
+            prev_a_channel=32,
             num_of_filters=64,
             activation='relu',
             pad_size=1,
@@ -234,7 +246,7 @@ class CustomCnnModel(tf.keras.models.Model):
         )
         self.conv5_layer = CustomConv(
             filter_size=3,
-            prev_a_channel=1,
+            prev_a_channel=64,
             num_of_filters=128,
             activation='relu',
             pad_size=1,
@@ -253,16 +265,22 @@ class CustomCnnModel(tf.keras.models.Model):
         self.dense_layer2 = tf.keras.layers.Dense(units=5, activation='softmax')
 
     def call(self, inputs, training=True, mask=True):
-        conv1 = self.conv1_layer.call(inputs, training=training)
-        pool1 = self.pool1_layer.call(conv1, training=training)
+        conv1 = self.conv1_layer(inputs, training=training)
+        pool1 = self.pool1_layer(conv1, training=training)
 
-        conv2 = self.conv2_layer.call(pool1, training=training)
-        pool2 = self.pool2_layer.call(conv2, training=training)
+        conv2 = self.conv2_layer(pool1, training=training)
+        pool2 = self.pool2_layer(conv2, training=training)
 
-        conv3 = self.conv3_layer.call(pool2, training=training)
-        pool3 = self.pool3_layer.call(conv3, training=training)
+        conv3 = self.conv3_layer(pool2, training=training)
+        pool3 = self.pool3_layer(conv3, training=training)
 
-        flatten = self.flatten_layer(pool3)
+        conv4 = self.conv4_layer(pool3, training=training)
+        pool4 = self.pool4_layer(conv4, training=training)
+
+        conv5 = self.conv5_layer(pool4, training=training)
+        pool5 = self.pool5_layer(conv5, training=training)
+
+        flatten = self.flatten_layer(pool5)
         hidden1 = self.dense_layer1(flatten)
         hidden2 = self.drop_out_layer(hidden1)
         output = self.dense_layer2(hidden2)
@@ -282,7 +300,7 @@ accuracy = tf.keras.metrics.CategoricalAccuracy()
 @tf.function
 def train_step(x, y):
     with tf.GradientTape() as tape:
-        logits = model.call(x)
+        logits = model(x)
         loss_value = loss(y, logits)
         gradients = tape.gradient(loss_value, model.trainable_weights)
         optimizer.apply_gradients(zip(gradients, model.trainable_weights))
@@ -292,13 +310,13 @@ def train_step(x, y):
 
 def test_step(x, y):
     accuracy.reset_state()
-    logits = model.call(x)
+    logits = model(x)
     accuracy.update_state(y, logits)
 
 
 # 6. model evaluation
 for epoch in range(5):
-    print('%dth epoch is' % (epoch + 1))
+    print('%dth epoch' % (epoch + 1))
     for index, (x, y) in enumerate(train_ds):
         loss_value = train_step(x, y)
         if index % 100 == 0:

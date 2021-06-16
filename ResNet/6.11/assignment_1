@@ -1,0 +1,16 @@
+1. normalization
+L1 vs L2 norm
+
+2. metric
+2.1 accuracy
+2.2 F score?
+also called F1 score
+it is used to evaluate binary classification systems, which classify examples into 'positive', 'negative'
+
+= precision + recall / (precision * recall)
+2.2.1 harmonic mean?
+
+
+3. Transfer learning
+3.1 fine tuning
+3.2 Freezing
